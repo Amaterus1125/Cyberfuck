@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERFUCK</title>
+    <link rel="icon" href="data:," />
+    
+    <style>
+        /* --- CUSTOM CYBER FONT (Restored!) --- */
+        @font-face {
+            font-family: 'CyberFont';
+            /* The absolute path '/' ensures Express finds it no matter what */
+            src: url('/cyber.ttf') format('truetype');
+            font-display: swap; 
+        }
+
+        body {
+            margin: 0; padding: 20px; min-height: 100vh; display: flex;
+            justify-content: center; align-items: flex-start;
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff; overflow-x: hidden;
+        }
+
+        #bg-video {
+            position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%;
+            z-index: -2; object-fit: cover; filter: brightness(0.25); 
+        }
+
+        /* --- CRT SCANLINE EFFECT --- */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+            background-size: 100% 4px; z-index: 100; pointer-events: none; opacity: 0.6;
+        }
+
+        /* --- NEON PURPLE FLICKER ANIMATION --- */
+        @keyframes neonFlicker {
+            0%, 90%, 94%, 98%, 100% { border-color: #d400ff; box-shadow: 0 0 15px #d400ff, inset 0 0 15px rgba(212, 0, 255, 0.3); }
+            92%, 96% { border-color: #30004a; box-shadow: 0 0 2px #30004a, inset 0 0 2px rgba(212, 0, 255, 0.05); }
+        }
+
+        @keyframes neonFlickerDelayed {
+            0%, 85%, 89%, 95%, 100% { border-color: #d400ff; box-shadow: 0 0 12px #d400ff, inset 0 0 12px rgba(212, 0, 255, 0.3); }
+            87%, 92% { border-color: #30004a; box-shadow: 0 0 2px #30004a, inset 0 0 2px rgba(212, 0, 255, 0.05); }
+        }
+
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(12px);
+            border: 2px solid #d400ff; border-radius: 12px;
+            width: 800px; padding: 30px; z-index: 1; margin-top: 2vh;
+            animation: neonFlicker 7s infinite alternate; 
+        }
+
+        h1 { 
+            margin-top: 0; 
+            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-size: 3.5rem; letter-spacing: 3px;
+            color: #d400ff; text-shadow: 0 0 15px #d400ff, 0 0 30px #d400ff; text-align: center; 
+            border-bottom: 2px solid rgba(212, 0, 255, 0.3); padding-bottom: 15px; 
+        }
+        
+        .section-box {
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(212, 0, 255, 0.4);
+            padding: 20px; border-radius: 8px; margin-bottom: 20px;
+            transition: all 0.3s ease;
+            animation: neonFlickerDelayed 5.5s infinite alternate;
+        }
+        .section-box:hover { border-color: #d400ff; box-shadow: 0 0 15px rgba(212,0,255,0.2); }
+        
+        h2 { 
+            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-size: 1.1rem; color: #d400ff; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; letter-spacing: 1px;
+        }
+
+        input, textarea {
+            background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(212, 0, 255, 0.3);
+            color: #d400ff; padding: 12px; border-radius: 6px; font-family: inherit;
+            width: 100%; box-sizing: border-box; outline: none; margin-bottom: 15px; transition: 0.3s;
+        }
+        input:focus, textarea:focus { border: 1px solid #d400ff; box-shadow: 0 0 10px rgba(212,0,255,0.5); }
+        textarea { resize: none; height: 70px; }
+        
+        /* --- CUSTOM FILE UPLOAD BUTTONS --- */
+        input[type="file"] { display: none; }
+        
+        .file-upload-wrapper { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .custom-file-upload {
+            border: 1px dashed #d400ff; background: rgba(212, 0, 255, 0.05); color: #d400ff;
+            padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
+            font-size: 0.9rem; 
+            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+        }
+        .custom-file-upload:hover { background: rgba(212, 0, 255, 0.2); box-shadow: 0 0 10px rgba(212,0,255,0.4); }
+        .file-name { color: #aaa; font-size: 0.85rem; font-style: italic; }
+
+        button {
+            width: 100%; padding: 14px; background: rgba(212, 0, 255, 0.1);
+            border: 1px solid #d400ff; color: #d400ff; font-weight: bold; 
+            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-size: 1.2rem;
+            border-radius: 6px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;
+        }
+        button:hover { background: #d400ff; color: #000; box-shadow: 0 0 25px #d400ff; }
+        button.danger { border-color: #ff5f56; color: #ff5f56; background: rgba(255, 95, 86, 0.1); }
+        button.danger:hover { background: #ff5f56; color: #000; box-shadow: 0 0 25px #ff5f56; }
+
+        .terminal {
+            background: rgba(0, 0, 0, 0.95); border: 2px solid #d400ff; border-top: 15px solid #d400ff;
+            border-radius: 6px; padding: 15px; height: 180px; overflow-y: auto;
+            color: #00ffcc; font-size: 0.9rem; white-space: pre-wrap; word-wrap: break-word;
+            animation: neonFlicker 8s infinite alternate;
+        }
+        .alert { color: #ff5f56; font-weight: bold; text-shadow: 0 0 8px #ff5f56; }
+        
+        /* Blinking Cursor Element */
+        .cursor { display: inline-block; width: 8px; height: 15px; background: #00ffcc; animation: blink 1s step-end infinite; margin-left: 2px; vertical-align: text-bottom;}
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #imgPreview { max-width: 100%; max-height: 150px; display: none; margin-top: 15px; border-radius: 4px; border: 1px solid #d400ff; }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <video autoplay loop muted playsinline id="bg-video">
+        <source src="background.mp4" type="video/mp4">
+    </video>
+
+    <div class="glass-panel">
+        <h1>CYBERFUCK</h1>
+
+        <div class="section-box">
+            <h2><span>[ MODULE 1: ENCRYPT ]</span> <span>🔒</span></h2>
+            <textarea id="secretData" placeholder="Enter highly classified text here..."></textarea>
+            
+            <div class="file-upload-wrapper">
+                <label for="imgUpload" class="custom-file-upload">+ SELECT IMAGE</label>
+                <input type="file" id="imgUpload" accept="image/*" />
+                <span class="file-name" id="imgUploadName">No file selected...</span>
+            </div>
+            
+            <input type="password" id="encPassword" maxlength="4" placeholder="[ ENCRYPTION PIN - 4 CHARACTERS ]" />
+            <button onclick="generateVault()">Encode & Download Vault</button>
+        </div>
+
+        <div class="section-box">
+            <h2><span>[ MODULE 2: DECRYPT ]</span> <span>🔓</span></h2>
+            
+            <div class="file-upload-wrapper">
+                <label for="bfUpload" class="custom-file-upload">+ SELECT .BF VAULT</label>
+                <input type="file" id="bfUpload" accept=".bf" />
+                <span class="file-name" id="bfUploadName">No file selected...</span>
+            </div>
+            
+            <input type="password" id="decPassword" maxlength="4" placeholder="[ DECRYPTION PIN - 4 CHARACTERS ]" />
+            <button class="danger" onclick="runVault()">Execute Honeypot</button>
+        </div>
+
+        <div class="terminal" id="terminalOutput">System initialized...<span class="cursor"></span></div>
+        <img id="imgPreview" />
+    </div>
+
+    <script>
+        let uploadedBfCode = "";
+
+        // Update UI File Names
+        document.getElementById('imgUpload').addEventListener('change', function(e) {
+            document.getElementById('imgUploadName').innerText = e.target.files[0] ? e.target.files[0].name : "No file selected...";
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => { 
+                document.getElementById('secretData').value = reader.result; 
+                log("[*] Image loaded into encoder."); 
+            }
+            if (file) reader.readAsDataURL(file);
+        });
+
+        document.getElementById('bfUpload').addEventListener('change', function(e) {
+            document.getElementById('bfUploadName').innerText = e.target.files[0] ? e.target.files[0].name : "No file selected...";
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => { 
+                uploadedBfCode = reader.result; 
+                log("[*] Vault file loaded into memory. Ready to execute."); 
+            }
+            if (file) reader.readAsText(file);
+        });
+
+        function log(msg, isAlert = false) {
+            const term = document.getElementById('terminalOutput');
+            const style = isAlert ? "class='alert'" : "";
+            // Keep the blinking cursor at the end
+            term.innerHTML = term.innerHTML.replace('<span class="cursor"></span>', '');
+            term.innerHTML += `<br><span ${style}>${msg}</span><span class="cursor"></span>`;
+            term.scrollTop = term.scrollHeight; 
+        }
+
+        function triggerDownload(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        async function generateVault() {
+            const data = document.getElementById('secretData').value;
+            const pass = document.getElementById('encPassword').value;
+            
+            if (!data) return log("[!] ERROR: No data entered to encrypt.", true);
+            if (pass.length !== 4) return log("[!] ERROR: PIN must be exactly 4 characters.", true);
+            
+            log("[*] Generating esoteric vault...");
+            
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secretData: data, passwordStr: pass })
+            });
+            const json = await res.json();
+            
+            if (json.error) return log("[!] ERROR: " + json.error, true);
+            
+            log("[*] " + json.message);
+            triggerDownload('vault.bf', json.bfCode); 
+            log("[*] vault.bf download started.");
+
+            // Wipe inputs clean
+            document.getElementById('secretData').value = '';
+            document.getElementById('encPassword').value = '';
+            document.getElementById('imgUpload').value = '';
+            document.getElementById('imgUploadName').innerText = 'No file selected...';
+            log("[*] Encoder module wiped clean.");
+        }
+
+        async function runVault() {
+            const pass = document.getElementById('decPassword').value;
+            if (!uploadedBfCode) return log("[!] ERROR: Please upload a .bf file first.", true);
+            if (pass.length !== 4) return log("[!] ERROR: PIN must be exactly 4 characters.", true);
+            
+            log("[*] Executing vault code...");
+            document.getElementById('imgPreview').style.display = 'none';
+
+            const res = await fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passwordStr: pass, bfCode: uploadedBfCode })
+            });
+            const json = await res.json();
+            
+            if (json.alert) {
+                log("[!] WEBHOOK TRIGGERED: Unauthorized access attempt.", true);
+                log(json.output, true);
+            } else {
+                log("[*] Decryption successful.");
+                
+                if (json.output.startsWith("data:image")) {
+                    const img = document.getElementById('imgPreview');
+                    img.src = json.output;
+                    img.style.display = 'block';
+                    log("[*] Image recovered and displayed below.");
+                } else {
+                    log("[*] DECRYPTED DATA: " + json.output);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
