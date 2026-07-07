@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- MODULE 1: ENCRYPT & GENERATE ---
+//  ENCRYPT & GENERATE
 app.post('/generate', (req, res) => {
     try {
         const { secretData, passwordStr } = req.body;
@@ -60,7 +60,7 @@ app.post('/generate', (req, res) => {
     }
 });
 
-// --- MODULE 2: DECRYPT & EXECUTE ---
+// DECRYPT & EXECUTE
 app.post('/run', (req, res) => {
     try {
         const { passwordStr, bfCode } = req.body;
