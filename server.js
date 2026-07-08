@@ -1,136 +1,175 @@
 const express = require('express');
+const crypto = require('crypto');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
-app.use(express.json({ limit: '50mb' })); 
+const PORT = process.env.PORT || 3000;
 
-// Block favicon requests to prevent CSP errors in the browser console
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-// Serve static UI files from the 'public' folder
+// Serve the static frontend
 app.use(express.static(path.join(__dirname, 'public')));
+app.disable('x-powered-by');
 
-// Explicit route to serve the UI
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// ==========================================
+// 🛡️ SECURITY HEADERS & CSP
+// ==========================================
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*"],
+            mediaSrc: ["'self'"] // Allows your background.mp4 to load
+        },
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    xContentTypeOptions: true,
+    xFrameOptions: { action: 'deny' }
+}));
+
+// Bumped limit to 10mb so you can encrypt larger images for the demo
+app.use(express.json({ limit: '200mb' }));
+// Also add this right below it so URL-encoded payloads are extended too:
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
+
+// ==========================================
+// 🛡️ TARPIT RATE LIMITER
+// ==========================================
+const honeypotLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 5, 
+    message: { error: "0xGIBBERISH_DATA_CORRUPTION_DETECTED: IP BLOCKED" },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
-// --- MODULE 1: ENCRYPT & GENERATE ---
-app.post('/generate', (req, res) => {
+// ==========================================
+// CRYPTO CORE (AES-256-GCM)
+// ==========================================
+const SALT = "CYBERFUCK_MASTER_SALT_2026"; 
+
+function deriveKey(pin) {
+    return crypto.pbkdf2Sync(pin, SALT, 100000, 32, 'sha256');
+}
+
+function encryptAES(text, pin) {
+    const key = deriveKey(pin);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag().toString('hex');
+
+    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+}
+
+function decryptAES(payload, pin) {
+    const parts = payload.split(':');
+    if (parts.length !== 3) throw new Error("Malformed Payload");
+
+    const [ivHex, authTagHex, encryptedHex] = parts;
+    const key = deriveKey(pin);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+}
+
+// ==========================================
+// ESOTERIC ENGINE (Brainfuck Dialect)
+// ==========================================
+function encodeBF(hexString, pin) {
+    let bfCode = "";
+    let pIndex = 0;
+    for (let i = 0; i < hexString.length; i++) {
+        let sChar = hexString.charCodeAt(i);
+        let pChar = pin.charCodeAt(pIndex % pin.length);
+        let diff = sChar - pChar;
+        
+        if (diff > 0) bfCode += "+".repeat(diff) + "?";
+        else if (diff < 0) bfCode += "-".repeat(Math.abs(diff)) + "?";
+        else bfCode += "?";
+        
+        pIndex++;
+    }
+    return bfCode;
+}
+
+function decodeBF(bfString, pin) {
+    let hexString = "";
+    let pIndex = 0;
+    let parts = bfString.split("?");
+    parts.pop(); 
+    
+    for (let part of parts) {
+        let pChar = pin.charCodeAt(pIndex % pin.length);
+        let diff = (part.match(/\+/g) || []).length - (part.match(/\-/g) || []).length;
+        hexString += String.fromCharCode(pChar + diff);
+        pIndex++;
+    }
+    return hexString;
+}
+
+// ==========================================
+// ROUTES
+// ==========================================
+app.post('/api/encrypt', (req, res) => {
     try {
-        const { secretData, passwordStr } = req.body;
-        
-        if (!secretData || !passwordStr || passwordStr.length !== 4) {
-            return res.status(400).json({ error: "Data missing or PIN is not exactly 4 characters." });
+        const { text, pin } = req.body;
+
+        if (!text || typeof text !== 'string' || text.length === 0) {
+            return res.status(400).json({ error: "Invalid text input." });
+        }
+        if (!pin || typeof pin !== 'string' || pin.length !== 8) {
+            return res.status(400).json({ error: "PIN must be exactly 8 characters." });
         }
 
-        // CYBERFUCK SECURITY: Prepend a hidden signature to verify perfect decryption later
-        const payload = "AUTH:" + secretData;
+        const aesPayload = encryptAES(text, pin);
+        const vaultData = encodeBF(aesPayload, pin);
 
-        // CYBERFUCK DIALECT: Using '?' instead of ',' so online interpreters cannot read this
-        let bfCode = "?>?>?>?<<<\n";
+        res.json({ vault: vaultData });
 
-        for (let i = 0; i < payload.length; i++) {
-            let pIndex = i % 4; 
-            let pChar = passwordStr.charCodeAt(pIndex);
-            let sChar = payload.charCodeAt(i);
-            let diff = sChar - pChar;
-
-            bfCode += ">".repeat(pIndex); 
-
-            if (diff > 0) bfCode += "+".repeat(diff);
-            else if (diff < 0) bfCode += "-".repeat(Math.abs(diff));
-
-            bfCode += "."; 
-
-            // Reverse shift to preserve password char in memory for the next loop
-            if (diff > 0) bfCode += "-".repeat(diff);
-            else if (diff < 0) bfCode += "+".repeat(Math.abs(diff));
-
-            bfCode += "<".repeat(pIndex); 
-            bfCode += "\n";
-        }
-
-        // Add massive decoy garbage code to the end
-        bfCode += "\n" + "+-[>+<-]><".repeat(150) + "\n";
-        
-        res.json({ message: "Vault generated!", bfCode: bfCode });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("[ENCRYPT ERROR]", err.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-// --- MODULE 2: DECRYPT & EXECUTE ---
-app.post('/run', (req, res) => {
+app.post('/api/decrypt', honeypotLimiter, (req, res) => {
     try {
-        const { passwordStr, bfCode } = req.body;
-        
-        if (!passwordStr || passwordStr.length !== 4 || !bfCode) {
-            return res.status(400).json({ error: "Missing vault file or PIN is not exactly 4 characters." });
+        const { vault, pin } = req.body;
+
+        if (!vault || typeof vault !== 'string' || vault.length < 10) {
+            return res.status(400).json({ error: "Invalid vault data." });
+        }
+        if (!pin || typeof pin !== 'string' || pin.length !== 8) {
+            return res.status(400).json({ error: "PIN must be exactly 8 characters." });
         }
 
-        let memory = new Array(30000).fill(0);
-        let ptr = 0;
-        let output = "";
-        let inputPtr = 0;
+        const aesPayload = decodeBF(vault, pin);
+        const decryptedText = decryptAES(aesPayload, pin);
 
-        // Bulletproof Cyberfuck Engine (Protected against NaN infinite loops)
-        for (let i = 0; i < bfCode.length; i++) {
-            let char = bfCode[i];
-            
-            if (char === '>') ptr++;
-            else if (char === '<') ptr--;
-            else if (char === '+') memory[ptr] = (memory[ptr] || 0) + 1;
-            else if (char === '-') memory[ptr] = (memory[ptr] || 0) - 1;
-            else if (char === '.') output += String.fromCharCode(memory[ptr] || 0);
-            
-            // Custom Security Dialect
-            else if (char === '?') {
-                memory[ptr] = passwordStr.charCodeAt(inputPtr) || 0;
-                inputPtr++;
-            }
-            
-            else if (char === '[') {
-                if ((memory[ptr] || 0) === 0) {
-                    let loopCount = 1;
-                    while (loopCount > 0) {
-                        i++;
-                        if (i >= bfCode.length) break;
-                        if (bfCode[i] === '[') loopCount++;
-                        if (bfCode[i] === ']') loopCount--;
-                    }
-                }
-            }
-            else if (char === ']') {
-                if ((memory[ptr] || 0) !== 0) {
-                    let loopCount = 1;
-                    while (loopCount > 0) {
-                        i--;
-                        if (i < 0) break;
-                        if (bfCode[i] === ']') loopCount++;
-                        if (bfCode[i] === '[') loopCount--;
-                    }
-                }
-            }
-        }
+        res.json({ data: decryptedText });
 
-        // HONEYPOT LOGIC: Check for the hidden signature 
-        if (output.startsWith("AUTH:")) {
-             // Correct PIN! Strip the signature and return the real data.
-             res.json({ output: output.substring(5), alert: false });
-        } else {
-             // Wrong PIN! The math corrupted the signature. Trigger the trap.
-             res.json({ 
-                 output: "0xGIBBERISH_DATA_CORRUPTION_DETECTED\n" + output.substring(0, 150) + "...", 
-                 alert: true 
-             });
-        }
     } catch (err) {
-        res.status(500).json({ error: "Execution failed: " + err.message });
+        console.error("[HONEYPOT TRIGGERED]", err.message);
+        res.status(401).json({ 
+            error: "CRITICAL ERROR: Engine overheated due to low-IQ input. Go back to standard Base64, script kiddie.",
+            alert: true
+        });
     }
 });
 
-const PORT = 3000;
+// ==========================================
+// SERVER STARTUP
+// ==========================================
 app.listen(PORT, () => {
-    console.log(`[CYBERFUCK SYSTEM] Engine online at http://localhost:${PORT}`);
+    console.log(`\n[CYBERFUCK SYSTEM] Engine online on port ${PORT}`);
+    console.log(`➜  Local Dashboard: http://localhost:${PORT}\n`);
 });

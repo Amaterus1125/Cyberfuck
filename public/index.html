@@ -7,10 +7,9 @@
     <link rel="icon" href="data:," />
     
     <style>
-        /* --- CUSTOM CYBER FONT (Restored!) --- */
+        
         @font-face {
             font-family: 'CyberFont';
-            /* The absolute path '/' ensures Express finds it no matter what */
             src: url('/cyber.ttf') format('truetype');
             font-display: swap; 
         }
@@ -54,7 +53,7 @@
 
         h1 { 
             margin-top: 0; 
-            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-family: 'CyberFont', sans-serif;
             font-size: 3.5rem; letter-spacing: 3px;
             color: #d400ff; text-shadow: 0 0 15px #d400ff, 0 0 30px #d400ff; text-align: center; 
             border-bottom: 2px solid rgba(212, 0, 255, 0.3); padding-bottom: 15px; 
@@ -69,7 +68,7 @@
         .section-box:hover { border-color: #d400ff; box-shadow: 0 0 15px rgba(212,0,255,0.2); }
         
         h2 { 
-            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-family: 'CyberFont', sans-serif;
             font-size: 1.1rem; color: #d400ff; margin-top: 0; margin-bottom: 15px; display: flex; justify-content: space-between; letter-spacing: 1px;
         }
 
@@ -81,7 +80,6 @@
         input:focus, textarea:focus { border: 1px solid #d400ff; box-shadow: 0 0 10px rgba(212,0,255,0.5); }
         textarea { resize: none; height: 70px; }
         
-        /* --- CUSTOM FILE UPLOAD BUTTONS --- */
         input[type="file"] { display: none; }
         
         .file-upload-wrapper { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
@@ -89,7 +87,7 @@
             border: 1px dashed #d400ff; background: rgba(212, 0, 255, 0.05); color: #d400ff;
             padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
             font-size: 0.9rem; 
-            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-family: 'CyberFont', sans-serif;
         }
         .custom-file-upload:hover { background: rgba(212, 0, 255, 0.2); box-shadow: 0 0 10px rgba(212,0,255,0.4); }
         .file-name { color: #aaa; font-size: 0.85rem; font-style: italic; }
@@ -97,7 +95,7 @@
         button {
             width: 100%; padding: 14px; background: rgba(212, 0, 255, 0.1);
             border: 1px solid #d400ff; color: #d400ff; font-weight: bold; 
-            font-family: 'CyberFont', sans-serif; /* Applied custom font */
+            font-family: 'CyberFont', sans-serif;
             font-size: 1.2rem;
             border-radius: 6px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;
         }
@@ -141,7 +139,7 @@
                 <span class="file-name" id="imgUploadName">No file selected...</span>
             </div>
             
-            <input type="password" id="encPassword" maxlength="4" placeholder="[ ENCRYPTION PIN - 4 CHARACTERS ]" />
+            <input type="password" id="encPassword" minlength="8" maxlength="8" placeholder="[ ENCRYPTION PIN - exactly 8 CHARACTERS ]" />
             <button onclick="generateVault()">Encode & Download Vault</button>
         </div>
 
@@ -154,7 +152,7 @@
                 <span class="file-name" id="bfUploadName">No file selected...</span>
             </div>
             
-            <input type="password" id="decPassword" maxlength="4" placeholder="[ DECRYPTION PIN - 4 CHARACTERS ]" />
+            <input type="password" id="decPassword" minlength="8" maxlength="8" placeholder="[ DECRYPTION PIN - exactly 8 CHARACTERS ]" />
             <button class="danger" onclick="runVault()">Execute Honeypot</button>
         </div>
 
@@ -212,60 +210,72 @@
             const pass = document.getElementById('encPassword').value;
             
             if (!data) return log("[!] ERROR: No data entered to encrypt.", true);
-            if (pass.length !== 4) return log("[!] ERROR: PIN must be exactly 4 characters.", true);
+            if (pass.length !== 8) return log("[!] ERROR: PIN must be exactly 8 characters.", true);
             
-            log("[*] Generating esoteric vault...");
+            log("[*] Generating secure esoteric vault...");
             
-            const res = await fetch('/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secretData: data, passwordStr: pass })
-            });
-            const json = await res.json();
-            
-            if (json.error) return log("[!] ERROR: " + json.error, true);
-            
-            log("[*] " + json.message);
-            triggerDownload('vault.bf', json.bfCode); 
-            log("[*] vault.bf download started.");
+            try {
+                const res = await fetch('/api/encrypt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: data, pin: pass })
+                });
+                const json = await res.json();
+                
+                if (!res.ok) return log("[!] ERROR: " + (json.error || "Encryption failed."), true);
+                
+                log("[*] Encryption successful.");
+                triggerDownload('vault.bf', json.vault); 
+                log("[*] vault.bf download started.");
 
-            // Wipe inputs clean
-            document.getElementById('secretData').value = '';
-            document.getElementById('encPassword').value = '';
-            document.getElementById('imgUpload').value = '';
-            document.getElementById('imgUploadName').innerText = 'No file selected...';
-            log("[*] Encoder module wiped clean.");
+                // Wipe inputs clean
+                document.getElementById('secretData').value = '';
+                document.getElementById('encPassword').value = '';
+                document.getElementById('imgUpload').value = '';
+                document.getElementById('imgUploadName').innerText = 'No file selected...';
+                log("[*] Encoder module wiped clean.");
+            } catch (err) {
+                log("[!] CRITICAL ERROR: Network failure.", true);
+            }
         }
 
         async function runVault() {
             const pass = document.getElementById('decPassword').value;
             if (!uploadedBfCode) return log("[!] ERROR: Please upload a .bf file first.", true);
-            if (pass.length !== 4) return log("[!] ERROR: PIN must be exactly 4 characters.", true);
+            if (pass.length !== 8) return log("[!] ERROR: PIN must be exactly 8 characters.", true);
             
             log("[*] Executing vault code...");
             document.getElementById('imgPreview').style.display = 'none';
 
-            const res = await fetch('/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ passwordStr: pass, bfCode: uploadedBfCode })
-            });
-            const json = await res.json();
-            
-            if (json.alert) {
-                log("[!] WEBHOOK TRIGGERED: Unauthorized access attempt.", true);
-                log(json.output, true);
-            } else {
+            try {
+                const res = await fetch('/api/decrypt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vault: uploadedBfCode, pin: pass })
+                });
+                const json = await res.json();
+                
+                if (!res.ok || json.alert) {
+                    log("[!] HONEYPOT TRIGGERED: Unauthorized access attempt.", true);
+                    log(json.error || "0xGIBBERISH_DATA_CORRUPTION_DETECTED", true);
+                    
+                    document.querySelector('.glass-panel').style.borderColor = "#ff5f56";
+                    setTimeout(() => document.querySelector('.glass-panel').style.borderColor = "#d400ff", 2000);
+                    return;
+                }
+                
                 log("[*] Decryption successful.");
                 
-                if (json.output.startsWith("data:image")) {
+                if (json.data.startsWith("data:image")) {
                     const img = document.getElementById('imgPreview');
-                    img.src = json.output;
+                    img.src = json.data;
                     img.style.display = 'block';
                     log("[*] Image recovered and displayed below.");
                 } else {
-                    log("[*] DECRYPTED DATA: " + json.output);
+                    log("[*] DECRYPTED DATA: " + json.data);
                 }
+            } catch (err) {
+                log("[!] CRITICAL ERROR: Network failure.", true);
             }
         }
     </script>
