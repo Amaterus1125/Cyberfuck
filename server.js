@@ -7,12 +7,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve the static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 app.disable('x-powered-by');
-
-
-//  SECURITY HEADERS & CSP
 
 app.use(helmet({
     contentSecurityPolicy: {
@@ -22,7 +18,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "http://localhost:*", "ws://localhost:*"],
-            mediaSrc: ["'self'"] // Allows your background.mp4 to load
+            mediaSrc: ["'self'"]
         },
     },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
@@ -30,25 +26,18 @@ app.use(helmet({
     xFrameOptions: { action: 'deny' }
 }));
 
-// Bumped limit to 10mb so you can encrypt larger images for the demo
 app.use(express.json({ limit: '200mb' }));
-// Also add this right below it so URL-encoded payloads are extended too:
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 
-
-//  TARPIT RATE LIMITER
-
 const honeypotLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 5, 
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: { error: "0xGIBBERISH_DATA_CORRUPTION_DETECTED: IP BLOCKED" },
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-// CRYPTO CORE (AES-256-GCM)
-
-const SALT = "CYBERFUCK_MASTER_SALT_2026"; 
+const SALT = "CYBERFUCK_MASTER_SALT_2026";
 
 function deriveKey(pin) {
     return crypto.pbkdf2Sync(pin, SALT, 100000, 32, 'sha256');
@@ -58,7 +47,7 @@ function encryptAES(text, pin) {
     const key = deriveKey(pin);
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
@@ -80,9 +69,6 @@ function decryptAES(payload, pin) {
     return decrypted;
 }
 
-
-// ESOTERIC ENGINE (Brainfuck Dialect)
-
 function encodeBF(hexString, pin) {
     let bfCode = "";
     let pIndex = 0;
@@ -90,11 +76,11 @@ function encodeBF(hexString, pin) {
         let sChar = hexString.charCodeAt(i);
         let pChar = pin.charCodeAt(pIndex % pin.length);
         let diff = sChar - pChar;
-        
+
         if (diff > 0) bfCode += "+".repeat(diff) + "?";
         else if (diff < 0) bfCode += "-".repeat(Math.abs(diff)) + "?";
         else bfCode += "?";
-        
+
         pIndex++;
     }
     return bfCode;
@@ -104,8 +90,8 @@ function decodeBF(bfString, pin) {
     let hexString = "";
     let pIndex = 0;
     let parts = bfString.split("?");
-    parts.pop(); 
-    
+    parts.pop();
+
     for (let part of parts) {
         let pChar = pin.charCodeAt(pIndex % pin.length);
         let diff = (part.match(/\+/g) || []).length - (part.match(/\-/g) || []).length;
@@ -114,9 +100,6 @@ function decodeBF(bfString, pin) {
     }
     return hexString;
 }
-
-
-// ROUTES
 
 app.post('/api/encrypt', (req, res) => {
     try {
@@ -158,17 +141,14 @@ app.post('/api/decrypt', honeypotLimiter, (req, res) => {
 
     } catch (err) {
         console.error("[HONEYPOT TRIGGERED]", err.message);
-        res.status(401).json({ 
+        res.status(401).json({
             error: "CRITICAL ERROR: Engine overheated due to low-IQ input. Go back to standard Base64, script kiddie.",
             alert: true
         });
     }
 });
 
-
-// SERVER STARTUP
-
 app.listen(PORT, () => {
-    console.log(`\n[CYBERFUCK SYSTEM] Engine online on port ${PORT}`);
-    console.log(`➜  Local Dashboard: http://localhost:${PORT}\n`);
+    console.log(`\n enegine online on port ${PORT}`);
+    console.log(` http://localhost:${PORT}\n`);
 });
