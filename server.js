@@ -7,7 +7,7 @@ app.use(express.json({ limit: '50mb' }));
 // Block favicon requests to prevent CSP errors in the browser console
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Serve static UI files from the 'public' folder
+// Serve static UI files from the public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Explicit route to serve the UI
@@ -24,10 +24,10 @@ app.post('/generate', (req, res) => {
             return res.status(400).json({ error: "Data missing or PIN is not exactly 4 characters." });
         }
 
-        // CYBERFUCK SECURITY: Prepend a hidden signature to verify perfect decryption later
+        //  Prepend a hidden signature to verify perfect decryption later
         const payload = "AUTH:" + secretData;
 
-        // CYBERFUCK DIALECT: Using '?' instead of ',' so online interpreters cannot read this
+        // you can change it however u wantt
         let bfCode = "?>?>?>?<<<\n";
 
         for (let i = 0; i < payload.length; i++) {
