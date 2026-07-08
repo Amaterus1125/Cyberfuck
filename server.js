@@ -11,9 +11,9 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 app.disable('x-powered-by');
 
-// ==========================================
-// 🛡️ SECURITY HEADERS & CSP
-// ==========================================
+
+//  SECURITY HEADERS & CSP
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -35,9 +35,9 @@ app.use(express.json({ limit: '200mb' }));
 // Also add this right below it so URL-encoded payloads are extended too:
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 
-// ==========================================
-// 🛡️ TARPIT RATE LIMITER
-// ==========================================
+
+//  TARPIT RATE LIMITER
+
 const honeypotLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: 5, 
@@ -46,9 +46,8 @@ const honeypotLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// ==========================================
 // CRYPTO CORE (AES-256-GCM)
-// ==========================================
+
 const SALT = "CYBERFUCK_MASTER_SALT_2026"; 
 
 function deriveKey(pin) {
@@ -81,9 +80,9 @@ function decryptAES(payload, pin) {
     return decrypted;
 }
 
-// ==========================================
+
 // ESOTERIC ENGINE (Brainfuck Dialect)
-// ==========================================
+
 function encodeBF(hexString, pin) {
     let bfCode = "";
     let pIndex = 0;
@@ -116,9 +115,9 @@ function decodeBF(bfString, pin) {
     return hexString;
 }
 
-// ==========================================
+
 // ROUTES
-// ==========================================
+
 app.post('/api/encrypt', (req, res) => {
     try {
         const { text, pin } = req.body;
@@ -166,9 +165,9 @@ app.post('/api/decrypt', honeypotLimiter, (req, res) => {
     }
 });
 
-// ==========================================
+
 // SERVER STARTUP
-// ==========================================
+
 app.listen(PORT, () => {
     console.log(`\n[CYBERFUCK SYSTEM] Engine online on port ${PORT}`);
     console.log(`➜  Local Dashboard: http://localhost:${PORT}\n`);
