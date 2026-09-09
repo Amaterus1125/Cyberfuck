@@ -5,6 +5,14 @@
 
 ---
 
+<br>
+<div align="center">
+<img src="https://imgs.search.brave.com/9AEpNcXhrCe6zSI1LP4lMFmWzQexvRwpcjWAgwWiBt4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wcmV2/aWV3LnJlZGQuaXQv/c291cmNlLWJsYWNr/bmlycm93LWNoaWJp/LWx1Y3ktdjAtb2d0/dGZiMWg2aWllMS5q/cGVnP3dpZHRoPTY0/MCZjcm9wPXNtYXJ0/JmF1dG89d2VicCZz/PThlOWRiZjNlMjJl/YzZhMTA2ZTMxNDE5/ZjdjNzUwZDUzNDg2/MDEwMDg" alt="Freyja banner" width="500">
+
+
+</div>
+
+---
 ##  The Concept
 Standard encryption is passive—it just sits there. **CyberFuck** is active. We leverage a custom-built, high-security Brainfuck dialect to transform plain text and images into encrypted vaults. 
 
